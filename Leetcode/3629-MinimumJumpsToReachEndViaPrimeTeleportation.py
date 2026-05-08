@@ -1,35 +1,65 @@
-mx = 10**6 + 1
-factors = [[] for _ in range(mx)]
-for i in range(2, mx):
-    if not factors[i]:
-        for j in range(i, mx, i):
-            factors[j].append(i)
-
+from collections import defaultdict, deque
 
 class Solution:
-    def minJumps(self, nums: List[int]) -> int:
+    def minJumps(self, nums):
         n = len(nums)
-        g = defaultdict(list)
+
+        # Store indices divisible by each number
+        div_map = defaultdict(list)
+
         for i, x in enumerate(nums):
-            for p in factors[x]:
-                g[p].append(i)
-        ans = 0
-        vis = [False] * n
-        vis[0] = True
-        q = [0]
-        while 1:
-            nq = []
-            for i in q:
-                if i == n - 1:
-                    return ans
-                idx = g[nums[i]]
-                idx.append(i + 1)
-                if i:
-                    idx.append(i - 1)
-                for j in idx:
-                    if not vis[j]:
-                        vis[j] = True
-                        nq.append(j)
-                idx.clear()
-            q = nq
-            ans += 1
+            d = 2
+            temp = x
+
+            while d * d <= temp:
+                if temp % d == 0:
+                    div_map[d].append(i)
+
+                    while temp % d == 0:
+                        temp //= d
+                d += 1
+
+            if temp > 1:
+                div_map[temp].append(i)
+
+        # Check prime
+        def is_prime(x):
+            if x < 2:
+                return False
+            d = 2
+            while d * d <= x:
+                if x % d == 0:
+                    return False
+                d += 1
+            return True
+
+        q = deque([(0, 0)])  # (index, steps)
+        visited = [False] * n
+        visited[0] = True
+
+        used_prime = set()
+
+        while q:
+            i, steps = q.popleft()
+
+            if i == n - 1:
+                return steps
+
+            # Adjacent moves
+            for ni in [i - 1, i + 1]:
+                if 0 <= ni < n and not visited[ni]:
+                    visited[ni] = True
+                    q.append((ni, steps + 1))
+
+            # Prime teleport
+            val = nums[i]
+
+            if is_prime(val) and val not in used_prime:
+                used_prime.add(val)
+
+                for ni in div_map[val]:
+                    if not visited[ni]:
+                        visited[ni] = True
+                        q.append((ni, steps + 1))
+
+        return -1
